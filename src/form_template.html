@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Ask me anything</title>
+	<link rel="stylesheet" type="text/css" href="styles.css">
+</head>
+<body>
+      <script>
+      const myButton = document.getElementById('button');
+      myButton.addEventListener('keypress', (event) => {
+        if (event.key === 'Enter') {
+          myButton.submit();
+        }
+      });
+      const myTextarea = document.getElementById('question');
+      myTextarea.addEventListener('keypress', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          // Submit the form here, e.g. using a submit button or a JavaScript function
+          document.getElementById('button').submit();
+        }
+      });
+      </script>
+
+	<h1>Ask me anything</h1>
+        <div>
+            This service will take your question and use an LLM to derive search topics
+            for Wikipedia. It will then search some Wikipedia pages and use the LLM again
+            to answer your question using the information in the Wikipedia pages. Finally,
+            it will give you some references.
+        </div>
+            <form action="/submit" method="post">
+		<label for="question">Enter your question:</label>
+                <input type="text" id="question" name="question">
+
+                <br/>
+
+		<input type="submit" id="button" value="Submit">
+                <br/>
+
+		<label for="model">Pick model:</label>
+                <input type="radio" id="model" name="model" value="gpt-4o">
+                  Chat GPT 4o
+                <input type="radio" id="model" name="model" value="gpt-3.5-turbo">
+                  Chat GPT 3.5 turbo
+                <input type="radio" id="model" name="model" value="llama3" checked>
+                  Llama3
+                <br/>
+
+		<label for="wikipages">Number of WikiPages to use:</label>
+                <input type="text" id="wikipages" name="wikipages" value="1"><br>
+
+                <br/>
+
+		<label for="question">Password (needed for OpenAI GPT models):</label>
+                <input type="text" id="password" name="password">
+
+	</form>
+</body>
+</html>

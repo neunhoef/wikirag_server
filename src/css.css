@@ -1,0 +1,42 @@
+body {
+	background-color: #ADD8E6; /* light blue */
+	font-family: Arial, sans-serif;
+        font-size: 30px;
+}
+
+h1 {
+	text-align: center;
+	margin-top: 48px;
+}
+
+div {
+    margin: 0 auto;
+    width: 50%;
+    text-align: justify;
+}
+
+form {
+	margin-top: 20px;
+	border: 1px solid #ccc;
+	padding: 10px;
+	width: 50%;
+	margin: 0 auto;
+	display: table; /* center the form vertically */
+        font-size: 30px;
+}
+
+#button {
+    width: 128px;
+    height: 48px;
+}
+
+#question {
+	font-size: 24px;
+        columns: 80;
+        width: 80%;
+}
+
+#output {
+    visibility: hidden;
+    font-size: 18px;
+}

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Ask me anything</title>
+	<link rel="stylesheet" type="text/css" href="styles.css">
+</head>
+<body>
+
+	<h1>Ask me anything</h1>
+        <div>
+            Your question was: {{question}}
+        </div>
+        <div>
+            The answer is: {{answer}}
+        </div>
+        <div>
+            Links: <ul>
+{% for link in links %}
+  <li><a href="{{ link }}">{{ link }}</a></li>
+{% endfor %}
+        </ul>
+        </div>
+        <div>
+            <button id="toggleButton">Show/Hide output</button>
+        </div>
+        <div id="output"><pre id="outputpre">
+{{output}}
+            </pre></div>
+        <div>
+          <a href="/">Back to question form.</a>
+        </div>
+	</form>
+    <script>
+        const output = document.getElementById('output');
+        const outputpre = document.getElementById('outputpre');
+        const toggleButton = document.getElementById('toggleButton');
+
+        toggleButton.addEventListener('click', () => {
+          if (output.style.visibility == 'hidden') {
+            output.style.visibility = 'visible';
+            outputpre.style.visibility = 'visible';
+          } else {
+            output.style.visibility = 'hidden';
+            outputpre.style.visibility = 'hidden';
+          }
+        });
+    </script>
+</body>
+</html>
