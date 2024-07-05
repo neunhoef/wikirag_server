@@ -1,5 +1,59 @@
+use std::io::Write;
+use std::process::{Command, Stdio};
 use tera::{Context, Tera};
 use warp::Filter;
+
+// Form HTML template
+const FORM_TEMPLATE: &str = include_str!("form_template.html");
+
+// Result HTML template
+const RESULT_TEMPLATE: &str = include_str!("result_template.html");
+
+// CSS stylesheet
+const CSS: &str = include_str!("css.css");
+
+#[derive(Debug)]
+struct Answer {
+    pub answer: String,
+    pub output: String,
+    pub references: Vec<String>,
+}
+
+fn call_wikirag(question: &str, model: &str, wikipages: &str) -> Result<Answer, String> {
+    // Check `wikipages` is a string with a sensible number, otherwise take 1!
+    let mut child = Command::new("wikirag")
+        .env("AI_MODEL", model.to_string())
+        .env("WIKI_PAGES", wikipages.to_string())
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("failed to execute child");
+    let mut stdin = child.stdin.take().expect("failed to get stdin");
+    let question = question.to_string() + "\n";
+    std::thread::spawn(move || {
+        stdin
+            .write_all(question.as_bytes())
+            .expect("failed to write to stdin");
+    });
+
+    let output = child.wait_with_output().expect("failed to wait on child");
+    let mut answer = Answer {
+        answer: std::str::from_utf8(&output.stdout).unwrap().to_string(),
+        output: std::str::from_utf8(&output.stderr).unwrap().to_string(),
+        references: vec![],
+    };
+    let pos = answer.answer.as_str().find("***Links***:\n");
+    if let Some(pos) = pos {
+        answer.references = answer.answer[pos + 13..answer.answer.len()]
+            .split('\n')
+            .map(|s| s.to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+        answer.answer = answer.answer[0..pos].to_string();
+    }
+    Ok(answer)
+}
 
 #[tokio::main]
 async fn main() {
@@ -39,9 +93,20 @@ async fn main() {
                     .get("question")
                     .unwrap_or(&"".to_string())
                     .to_string();
+                let model = form_data
+                    .get("model")
+                    .unwrap_or(&"llama3".to_string())
+                    .to_string();
+                let pages = form_data
+                    .get("wikipages")
+                    .unwrap_or(&"1".to_string())
+                    .to_string();
+                let answer = call_wikirag(&question, &model, &pages).expect("should not go wrong");
                 let mut context = Context::new();
                 context.insert("question", &question);
-                context.insert("answer", "42");
+                context.insert("answer", &answer.answer);
+                context.insert("output", &answer.output);
+                context.insert("links", &answer.references);
                 let rendered = tera
                     .render("result.html", &context)
                     .expect("Error rendering template");
@@ -53,118 +118,5 @@ async fn main() {
     let routes = form_route.or(css_route).or(submit_route);
 
     // Start the warp server
-    warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
+    warp::serve(routes).run(([0, 0, 0, 0], 3030)).await;
 }
-
-// Form HTML template
-const FORM_TEMPLATE: &str = r#"
-<!DOCTYPE html>
-<html lang="en">
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Ask me anything</title>
-	<link rel="stylesheet" type="text/css" href="styles.css">
-</head>
-<body>
-      <script>
-      const myButton = document.getElementById('button');
-      myButton.addEventListener('keypress', (event) => {
-        if (event.key === 'Enter') {
-          myButton.submit();
-        }
-      });
-      const myTextarea = document.getElementById('question');
-      myTextarea.addEventListener('keypress', (event) => {
-        if (event.key === 'Enter') {
-          event.preventDefault();
-          // Submit the form here, e.g. using a submit button or a JavaScript function
-          document.getElementById('button').submit();
-        }
-      });
-      </script>
-
-	<h1>Ask me anything</h1>
-        <div>
-            This service will take your question and use an LLM to derive search topics
-            for Wikipedia. It will then search some Wikipedia pages and use the LLM again
-            to answer your question using the information in the Wikipedia pages. Finally,
-            it will give you some references.
-        </div>
-            <form action="/submit" method="post">
-		<label for="name">Enter your question:</label>
-                <input type="text" id="question" name="question"><br><br>
-		<input type="submit" id="button" value="Submit">
-	</form>
-</body>
-</html>
-"#;
-
-// Result HTML template
-const RESULT_TEMPLATE: &str = r#"
-<!DOCTYPE html>
-<html lang="en">
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Ask me anything</title>
-	<link rel="stylesheet" type="text/css" href="styles.css">
-</head>
-<body>
-	<h1>Ask me anything</h1>
-        <div>
-            Your question was: {{question}}
-        </div>
-        <div>
-            The answer is: {{answer}}
-        </div>
-        <div>
-          <a href="/">Back to question form.</a>
-        </div>
-	</form>
-</body>
-</html>
-"#;
-
-// CSS stylesheet
-const CSS: &str = r#"
-body {
-	background-color: #ADD8E6; /* light blue */
-	font-family: Arial, sans-serif;
-        font-size: 30px;
-}
-
-h1 {
-	text-align: center;
-	margin-top: 48px;
-}
-
-div {
-    margin: 0 auto;
-    width: 50%;
-    text-align: justify;
-}
-
-form {
-	margin-top: 20px;
-	border: 1px solid #ccc;
-	padding: 10px;
-	width: 50%;
-	margin: 0 auto;
-	display: table; /* center the form vertically */
-        font-size: 30px;
-}
-
-#button {
-    width: 128px;
-    height: 48px;
-}
-
-#question {
-	font-size: 24px;
-        columns: 80;
-        width: 80%;
-}
-"#;
